@@ -215,18 +215,18 @@ SipHash is a secure, fast, and simple 64-bit MAC designed for network traffic au
 
 Thanks to the block-header-based SipHash keys, we can assume that the only collisions on links between honest nodes are random ones.
 
-For each of the ''t'' block transactions, the receiver will compare its received short ID with that of a set of ''m'' mempool transactions. We assume that each of those ''t'' has a chance ''r'' to be included in that set of ''m''. If we use ''B'' bits short IDs, for each comparison between a received short ID and a mempool transaction, there is a chance of ''P = 1 - 2<sup>-B</sup>'' that a mismatch is detected as such.
+For each of the ''t'' block transactions, the receiver will compare its received short ID with that of a set of ''m'' mempool transactions. We assume that each of those ''t'' has a chance ''r'' to be included in that set of ''m''. If we use ''B'' bits short IDs, for each comparison between a received short ID and a mempool transaction, there is a chance of ''P = 1-2<sup>-B</sup>'' that a mismatch is detected as such.
 
 When comparing a given block transaction to the whole set of mempool transactions, there are 5 cases to distinguish:
 # The receiver has exactly one match, which is the correct one. This has chance ''r P<sup>m-1</sup>''.
-# The receiver has no matches. This has chance ''(1 - r) P<sup>m</sup>''.
+# The receiver has no matches. This has chance ''(1-r)P<sup>m</sup>''.
 # The receiver has at least two matches, one of which is correct. This has chance ''r (1 - P<sup>m-1</sup>)''.
-# The receiver has at least two matches, both of which are incorrect. This has chance ''(1 - r) (1 - P<sup>m</sup> - m (1 - P) P<sup>m - 1</sup>)''.
-# The receiver has exactly one match, but an incorrect one. This has chance ''(1 - r) m (1 - P) P<sup>m - 1</sup>''.
+# The receiver has at least two matches, both of which are incorrect. This has chance ''(1-r)(1-P<sup>m</sup>-m(1-P)P<sup>m-1</sup>)''.
+# The receiver has exactly one match, but an incorrect one. This has chance ''(1-r)m(1-P)P<sup>m-1</sup>''.
 
 (note that these 5 numbers always add up to 100%)
 
-In case 1, we're good. In cases 2, 3, or 4, we request the full transaction because we know we're uncertain. Only in case 5, we fail to reconstruct. The chance that case 5 does not occur in any of the ''t'' transactions in a block is ''(1 - (1 - r) m (1 - P) P<sup>m - 1</sup>)<sup>t</sup>''. This expression is well approximated by ''1 - (1 - r) m (1 - P) t'' = ''1 - (1 - r) m t 2<sup>-B</sup>''. Thus, if we want only one in F block transmissions between honest nodes to fail under the conservative ''r = 0'' assumption, we need ''log<sub>2</sub>(F m t)'' bits hash functions.
+In case 1, we're good. In cases 2, 3, or 4, we request the full transaction because we know we're uncertain. Only in case 5, we fail to reconstruct. The chance that case 5 does not occur in any of the ''t'' transactions in a block is ''(1-(1-r)m(1-P)P<sup>m-1</sup>)<sup>t</sup>''. This expression is well approximated by ''1-(1-r)m(1-P)t'' = ''1-(1-r) m t 2<sup>-B</sup>''. Thus, if we want only one in F block transmissions between honest nodes to fail under the conservative ''r = 0'' assumption, we need ''log<sub>2</sub>(F m t)'' bits hash functions.
 
 This means that ''B = 48'' bits short IDs suffice for blocks with up to ''t = 10000'' transactions, mempools up to ''m = 100000'' transactions, with failure to reconstruct at most one in ''F = 281474'' blocks. Since failure to reconstruct just means we fall back to normal inv/header based relay, it isn't necessary to avoid such failure completely. It just needs to be sufficiently rare they have a lower impact than random transmission failures (for example, network disconnection, node overloaded, ...).
 
