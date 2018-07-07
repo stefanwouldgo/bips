@@ -24,7 +24,7 @@ from not being standardized. This document seeks to change that. As we
 propose a new standard, a number of improvements not specific to Schnorr signatures can be
 made:
 
-* '''Signature encoding''': Instead [https://en.wikipedia.org/wiki/X.690#DER_encoding DER]-encoding for signatures (which are variable size, and up to 72 bytes), we can use a simple fixed 64-byte format.
+* '''Signature encoding''': Instead of [https://en.wikipedia.org/wiki/X.690#DER_encoding DER]-encoding for signatures (which are variable size, and up to 72 bytes), we can use a simple fixed 64-byte format.
 * '''Batch validation''': The specific formulation of ECDSA signatures that is standardized cannot be validated more efficiently in batch compared to individually, unless additional witness data is added. Changing the signature scheme offers an opportunity to avoid this.
 
 [[File:bip-schnorr/speedup-batch.png|frame|This graph shows the ratio between the time it takes to verify ''n'' signatures individually and to verify a batch of ''n'' signatures. This ratio goes up logarithmically with the number of signatures, or in other words: the total time to verify ''n'' signatures grows with ''O(n / log n)''.]]
@@ -129,7 +129,7 @@ All provided signatures are valid if and only if the algorithm below does not fa
 ==== Signing ====
 
 Input:
-* The secret key ''d'': a integer in the range ''1..n-1''.
+* The secret key ''d'': an integer in the range ''1..n-1''.
 * The message ''m'': an array of 32 bytes
 
 To sign:
