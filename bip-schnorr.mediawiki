@@ -272,7 +272,7 @@ def bytes_point(p):
     return (b'\x03' if p[1] & 1 else b'\x02') + p[0].to_bytes(32, byteorder="big")
 
 def sha256(b):
-    return int.from_bytes(hashlib.sha256().update(b).digest(), byteorder="big")
+    return int.from_bytes(hashlib.sha256(b).digest(), byteorder="big")
 
 def on_curve(point):
     return (pow(point[1], 2, p) - pow(point[0], 3, p)) % p == 7
