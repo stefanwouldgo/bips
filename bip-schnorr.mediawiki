@@ -160,7 +160,7 @@ Consensus support for Schnorr signature verification would enable several applic
 
 By means of an interactive scheme such as [https://eprint.iacr.org/2018/068 MuSig], participants can produce a combined public key which they can jointly sign for. This allows n-of-n multisignatures which, from a verifier's perspective, are no different from ordinary signatures, giving improved privacy and efficiency versus ''CHECKMULTISIG'' or other means.
 
-Further, by combining Schnorr signatures with [http://www.cs.huji.ac.il/~ns/Papers/pederson91.pdf Pedersen Secret Sharing], it is possible to obtain [http://cacr.uwaterloo.ca/techreports/2001/corr2001-13.ps an interactive threshold signature scheme] that ensures that signatures can only be produced by arbitrary but predetermined sets of signers. For example, k-of-n threshold signatures can be realized this way. Furthermore, it is possible to replace the combination of participant keys in this scheme with MuSig, though the security of that combination still needs analysis.
+Further, by combining Schnorr signatures with [https://link.springer.com/content/pdf/10.1007/3-540-46766-1_9.pdf Pedersen Secret Sharing], it is possible to obtain [http://cacr.uwaterloo.ca/techreports/2001/corr2001-13.ps an interactive threshold signature scheme] that ensures that signatures can only be produced by arbitrary but predetermined sets of signers. For example, k-of-n threshold signatures can be realized this way. Furthermore, it is possible to replace the combination of participant keys in this scheme with MuSig, though the security of that combination still needs analysis.
 
 ===Adaptor Signatures===
 
