@@ -154,7 +154,8 @@ Many techniques are known for optimizing elliptic curve implementations. Several
 
 == Applications ==
 
-Consensus support for Schnorr signature verification would enable several applications beyond simple signatures.
+There are several interesting applications beyond simple signatures.
+While recent academic papers claim that they are also possible with ECDSA, consensus support for Schnorr signature verification would significantly simplify the constructions.
 
 ===Multisignatures and Threshold Signatures===
 
