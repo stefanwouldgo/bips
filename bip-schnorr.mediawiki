@@ -132,12 +132,12 @@ Input:
 * The secret key ''d'': an integer in the range ''1..n-1''.
 * The message ''m'': an array of 32 bytes
 
-To sign:
+To sign ''m'' for public key ''dG'':
 * Let ''k = int(hash(bytes(d) || m)) mod n''<ref>Note that in general, taking the output of a hash function modulo the curve order will produce an unacceptably biased result. However, for the secp256k1 curve, the order is sufficiently close to ''2<sup>256</sup>'' that this bias is not observable (''1 - n / 2<sup>256</sup>'' is around ''1.27 * 2<sup>-128</sup>'').</ref>.
 * Let ''R = kG''.
 * If ''jacobi(y(R)) &ne; 1'', let ''k = n - k''.
 * Let ''e = int(hash(bytes(x(R)) || bytes(dG) || m)) mod n''.
-* The signature is ''bytes(x(R)) || bytes(k + ex mod n)''.
+* The signature is ''bytes(x(R)) || bytes(k + ed mod n)''.
 
 Note that this is not a ''unique signature'' scheme: while this algorithm will always produce the same signature for a given message and public key, ''k'' (and hence ''R'') may be generated in other ways (such as by a CSPRNG) producing a different, but still valid, signature.
 
@@ -147,7 +147,7 @@ Many techniques are known for optimizing elliptic curve implementations. Several
 
 '''Jacobi symbol''' The function ''jacobi(x)'' is defined as above, but can be computed more efficiently using an [https://en.wikipedia.org/wiki/Jacobi_symbol#Calculating_the_Jacobi_symbol extended GCD algorithm].
 
-'''Jacobian coordinates''' Elliptic Curve operations can be implemented more efficiently by using [https://en.wikibooks.org/wiki/Cryptography/Prime_Curve/Jacobian_Coordinates Jacobian coordinates]. Elliptic Curve operations implemented this way avoid many intermediate modular inverses (which are computationally expensive), and the scheme proposed in this document is in fact designed to not need any inversions at all for validation. When operating on a point ''P'' with Jacobian coordinates ''(x,y,z)'', for which ''x(P)'' is defined as ''x / z<sup>2</sup>'' and ''y(P)'' is defined as ''y / z<sup>3</sup>'':
+'''Jacobian coordinates''' Elliptic Curve operations can be implemented more efficiently by using [https://en.wikibooks.org/wiki/Cryptography/Prime_Curve/Jacobian_Coordinates Jacobian coordinates]. Elliptic Curve operations implemented this way avoid many intermediate modular inverses (which are computationally expensive), and the scheme proposed in this document is in fact designed to not need any inversions at all for validation. When operating on a point ''P'' with Jacobian coordinates ''(x,y,z)'' which is not the point at infinity and for which ''x(P)'' is defined as ''x / z<sup>2</sup>'' and ''y(P)'' is defined as ''y / z<sup>3</sup>'':
 * ''oncurve(P)'' can be implemented as ''y<sup>2</sup> = x<sup>3</sup> + 7z<sup>6</sup> mod p''.
 * ''jacobi(y(P))'' can be implemented as ''jacobi(yz mod p)''.
 * ''x(P) &ne; r'' can be implemented as ''x &ne; z<sup>2</sup>r mod p''.
@@ -237,6 +237,7 @@ The following triples of (public key, message, signature) should not pass verifi
 == Appendix A: Reference code ==
 
 A naive but highly inefficient and non-constant time pure Python 3.2 implementation of the signing and verification algorithm can be found below.
+The reference code is for demonstration purposes only and not to be used in production environments.
 
 <source lang="python">
 import hashlib
@@ -281,11 +282,11 @@ def jacobi(x):
     return pow(x, (p - 1) // 2, p)
 
 def schnorr_sign(msg, seckey):
-    k = sha256(seckey.to_bytes(32, byteorder="big") + msg)
+    k = sha256(seckey.to_bytes(32, byteorder="big") + msg) % n
     R = point_mul(G, k)
     if jacobi(R[1]) != 1:
         k = n - k
-    e = sha256(R[0].to_bytes(32, byteorder="big") + bytes_point(point_mul(G, seckey)) + msg)
+    e = sha256(R[0].to_bytes(32, byteorder="big") + bytes_point(point_mul(G, seckey)) + msg) % n
     return R[0].to_bytes(32, byteorder="big") + ((k + e * seckey) % n).to_bytes(32, byteorder="big")
 
 def schnorr_verify(msg, pubkey, sig):
@@ -295,7 +296,7 @@ def schnorr_verify(msg, pubkey, sig):
     s = int.from_bytes(sig[32:64], byteorder="big")
     if r >= p or s >= n:
         return False
-    e = sha256(sig[0:32] + bytes_point(pubkey) + msg)
+    e = sha256(sig[0:32] + bytes_point(pubkey) + msg) % n
     R = point_add(point_mul(G, s), point_mul(pubkey, n - e))
     if R is None or jacobi(R[1]) != 1 or R[0] != r:
         return False
