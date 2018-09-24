@@ -134,6 +134,7 @@ Input:
 
 To sign ''m'' for public key ''dG'':
 * Let ''k' = int(hash(bytes(d) || m)) mod n''<ref>Note that in general, taking the output of a hash function modulo the curve order will produce an unacceptably biased result. However, for the secp256k1 curve, the order is sufficiently close to ''2<sup>256</sup>'' that this bias is not observable (''1 - n / 2<sup>256</sup>'' is around ''1.27 * 2<sup>-128</sup>'').</ref>.
+* Fail if ''k' = 0''
 * Let ''R = k'G''.
 * Let ''k = k' '' if ''jacobi(y(R)) = 1'', otherwise let ''k = n - k' ''.
 * Let ''e = int(hash(bytes(x(R)) || bytes(dG) || m)) mod n''.
