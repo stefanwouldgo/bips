@@ -56,6 +56,10 @@ def jacobi(x):
     return pow(x, (p - 1) // 2, p)
 
 def schnorr_sign(msg, seckey):
+    if len(msg) != 32:
+        raise ValueError('The message must be a 32-byte array.')
+    if not (1 <= seckey <= n - 1):
+        raise ValueError('The secret key must be an integer in the range 1..n-1.')
     k0 = int_from_bytes(hash_sha256(bytes_from_int(seckey) + msg)) % n
     if k0 == 0:
         raise RuntimeError('Failure. This happens only with negligible probability.')
@@ -65,6 +69,12 @@ def schnorr_sign(msg, seckey):
     return bytes_from_int(R[0]) + bytes_from_int((k + e * seckey) % n)
 
 def schnorr_verify(msg, pubkey, sig):
+    if len(msg) != 32:
+        raise ValueError('The message must be a 32-byte array.')
+    if len(pubkey) != 33:
+        raise ValueError('The public key must be a 33-byte array.')
+    if len(sig) != 64:
+        raise ValueError('The signature must be a 64-byte array.')
     P = point_from_bytes(pubkey)
     if (P is None):
         return False
