@@ -78,27 +78,27 @@ The following convention is used, with constants as defined for secp256k1:
 ** ''infinite(P)'' returns whether or not ''P'' is the point at infinity.
 ** ''x(P)'' and ''y(P)'' refer to the X and Y coordinates of a point ''P'' (assuming it is not infinity).
 ** The constant ''G'' refers to the generator, for which ''x(G) = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798'' and ''y(G) = 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8''.
-** ''oncurve(P)'' returns whether a point ''P'' is on the curve and not infinite.
 ** Addition of points refers to the usual [https://en.wikipedia.org/wiki/Elliptic_curve#The_group_law elliptic curve group operation].
 ** [https://en.wikipedia.org/wiki/Elliptic_curve_point_multiplication Multiplication of an integer and a point] refers to the repeated application of the group operation.
 * Functions and operations:
 ** ''||'' refers to byte array concatenation.
-** The function ''bytes(x)'', where ''x'' is an integer, returns the 32 byte encoding of ''x'', most significant byte first.
-** The function ''bytes(P)'', where ''P'' is a point, returns ''byte(0x02 + (y(P) & 1)) || bytes(x(P))''<ref>This matches the ''compressed'' encoding for elliptic curve points used in Bitcoin already, following section 2.3.3 of the [http://www.secg.org/sec1-v2.pdf SEC 1] standard.</ref>.
-** The function ''int(x)'', where ''x'' is a 32 byte array, returns the 256-bit unsigned integer whose most significant byte encoding is ''x''.
-** The function ''x[i:j]'', where ''x'' is a 32 byte array, returns a ''j - i'' byte array with a copy of the ''i''-th byte (inclusive) to the ''j''-th byte (exclusive) of ''x''.
-** The function ''hash(x)'', where ''x'' is a byte array, returns the 32 byte SHA256 hash of ''x''.
+** The function ''x[i:j]'', where ''x'' is a byte array, returns a ''(j - i)''-byte array with a copy of the ''i''-th byte (inclusive) to the ''j''-th byte (exclusive) of ''x''.
+** The function ''bytes(x)'', where ''x'' is an integer, returns the 32-byte encoding of ''x'', most significant byte first.
+** The function ''bytes(P)'', where ''P'' is a point, returns ''bytes(0x02 + (y(P) & 1)) || bytes(x(P))''<ref>This matches the ''compressed'' encoding for elliptic curve points used in Bitcoin already, following section 2.3.3 of the [http://www.secg.org/sec1-v2.pdf SEC 1] standard.</ref>.
+** The function ''point(x)'', where ''x'' is a 33-byte array, returns the point ''P'' for which ''x(P) = int(x[1:33])'' and ''y(P) & 1 = int(x[0:1]) - 0x02)'', or fails if no such point exists<ref>Given an X coordinate ''x(P)'', there exist either exactly two or exactly zero valid Y coordinates. The valid Y coordinates are the square roots of ''c = (x(P))<sup>3</sup> + 7 mod p'' and they can be computed as ''y = &plusmn;c<sup>(p+1)/4</sup> mod p'' (see [https://en.wikipedia.org/wiki/Quadratic_residue#Prime_or_prime_power_modulus Quadratic residue]) if they exist, which can be checked by squaring and comparing with ''c''. Due to [https://en.wikipedia.org/wiki/Euler%27s_criterion Euler's criterion] it then holds that ''c<sup>(p-1)/2</sup> = 1 mod p''. The same criterion applied to ''y'' results in ''y<sup>(p-1)/2</sup> mod p= &plusmn;c<sup>(p+1)/4<sup>(p-1)/2</sup></sup> mod p = &plusmn;1 mod p''. Therefore ''y = +c<sup>(p+1)/4</sup> mod p'' is a quadratic residue and ''-y mod p'' is not.</ref>.
+** The function ''int(x)'', where ''x'' is a 32-byte array, returns the 256-bit unsigned integer whose most significant byte encoding is ''x''.
+** The function ''hash(x)'', where ''x'' is a byte array, returns the 32-byte SHA256 hash of ''x''.
 ** The function ''jacobi(x)'', where ''x'' is an integer, returns the [https://en.wikipedia.org/wiki/Jacobi_symbol Jacobi symbol] of ''x / p''. It is equal to ''x<sup>(p-1)/2</sup> mod p'' ([https://en.wikipedia.org/wiki/Euler%27s_criterion Euler's criterion])<ref>For points ''P'' on the secp256k1 curve it holds that ''jacobi(y(P)) &ne; 0''.</ref>
 
 ==== Verification ====
 
 Input:
-* The public key ''P'': a point
-* The message ''m'': a 32 byte array
-* A signature ''sig'': a 64 byte array
+* The public key ''pk'': a 33-byte array
+* The message ''m'': a 32-byte array
+* A signature ''sig'': a 64-byte array
 
 The signature is valid if and only if the algorithm below does not fail.
-* Fail if ''not oncurve(P)''.
+* Let ''P = point(pk)''; fail if ''point(pk)'' fails.
 * Let ''r = int(sig[0:32])''; fail if ''r &ge; p''.
 * Let ''s = int(sig[32:64])''; fail if ''s &ge; n''.
 * Let ''e = int(hash(bytes(r) || bytes(P) || m)) mod n''.
@@ -108,20 +108,20 @@ The signature is valid if and only if the algorithm below does not fail.
 ==== Batch verification ====
 
 Input:
-* The number of signatures ''u''.
-* The public keys ''P<sub>1...u</sub>'': ''u'' points
-* The messages ''m<sub>1...u</sub>'': ''u'' 32 byte arrays.
-* The signatures ''sig<sub>1...u</sub>'': ''u'' 64 byte arrays.
+* The number ''u'' of signatures
+* The public keys ''pk<sub>1..u</sub>'': ''u'' 33-byte arrays
+* The messages ''m<sub>1..u</sub>'': ''u'' 32-byte arrays
+* The signatures ''sig<sub>1..u</sub>'': ''u'' 64-byte arrays
 * Random numbers ''a<sub>2...u</sub>'' in the range ''1...n-1'': ''u-1'' integers. These can either be generated deterministically using a [https://en.wikipedia.org/wiki/Cryptographically_secure_pseudorandom_number_generator CSPRNG] seeded by a cryptographic hash (e.g., SHA256) of all the other inputs, or be randomly generated independently for each batch of verifications.
 
-All provided signatures are valid if and only if the algorithm below does not fail.
+All provided signatures are valid with overwhelming probability if and only if the algorithm below does not fail.
 * For ''i = 1 .. u'':
-** Fail if ''not oncurve(P<sub>i</sub>)''.
+** Let ''P<sub>i</sub> = point(pk<sub>i</sub>)''; fail if ''point(pk<sub>i</sub>)'' fails.
 ** Let ''r = int(sig<sub>i</sub>[0:32])''; fail if ''r &ge; p''.
 ** Let ''s<sub>i</sub> = int(sig<sub>i</sub>[32:64])''; fail if ''s<sub>i</sub> &ge; n''.
 ** Let ''e<sub>i</sub> = int(hash(bytes(r) || bytes(P<sub>i</sub>) || m<sub>i</sub>)) mod n''.
 ** Let ''c = r<sup>3</sup> + 7 mod p''.
-** Let ''y = c<sup>(p+1)/4</sup> mod p''<ref>The Y coordinates are the square roots of ''c'' and they can be computed as ''y = &plusmn;c<sup>(p+1)/4</sup> mod p'' (see [https://en.wikipedia.org/wiki/Quadratic_residue#Prime_or_prime_power_modulus Quadratic residue]) if they exist, which can be checked by squaring and comparing with ''c''. Due to [https://en.wikipedia.org/wiki/Euler%27s_criterion Euler's criterion] it then holds that ''c<sup>(p-1)/2</sup> = 1 mod p''. The same criterion applied to ''y'' results in ''y<sup>(p-1)/2</sup> mod p= &plusmn;c<sup>(p+1)/4<sup>(p-1)/2</sup></sup> mod p = &plusmn;1 mod p''. Therefore ''y = +c<sup>(p+1)/4</sup> mod p'' is a quadratic residue and ''-y mod p'' is not.</ref>.
+** Let ''y = c<sup>(p+1)/4</sup> mod p''
 ** Fail if ''y<sup>2</sup> &ne; c''.
 ** Let ''R<sub>i</sub> = (r, y)''.
 * Fail if ''(s<sub>1</sub> + a<sub>2</sub>s<sub>2</sub> + ... + a<sub>u</sub>s<sub>u</sub>)G &ne; R<sub>1</sub> + a<sub>2</sub>R<sub>2</sub> + ... + a<sub>u</sub>R<sub>u</sub> + e<sub>1</sub>P<sub>1</sub> + (a<sub>2</sub>e<sub>2</sub>)P<sub>2</sub> + ... + (a<sub>u</sub>e<sub>u</sub>)P<sub>u</sub>''.
@@ -130,11 +130,11 @@ All provided signatures are valid if and only if the algorithm below does not fa
 
 Input:
 * The secret key ''d'': an integer in the range ''1..n-1''.
-* The message ''m'': an array of 32 bytes
+* The message ''m'': a 32-byte array
 
 To sign ''m'' for public key ''dG'':
 * Let ''k' = int(hash(bytes(d) || m)) mod n''<ref>Note that in general, taking the output of a hash function modulo the curve order will produce an unacceptably biased result. However, for the secp256k1 curve, the order is sufficiently close to ''2<sup>256</sup>'' that this bias is not observable (''1 - n / 2<sup>256</sup>'' is around ''1.27 * 2<sup>-128</sup>'').</ref>.
-* Fail if ''k' = 0''
+* Fail if ''k' = 0''.
 * Let ''R = k'G''.
 * Let ''k = k' '' if ''jacobi(y(R)) = 1'', otherwise let ''k = n - k' ''.
 * Let ''e = int(hash(bytes(x(R)) || bytes(dG) || m)) mod n''.
@@ -149,7 +149,6 @@ Many techniques are known for optimizing elliptic curve implementations. Several
 '''Jacobi symbol''' The function ''jacobi(x)'' is defined as above, but can be computed more efficiently using an [https://en.wikipedia.org/wiki/Jacobi_symbol#Calculating_the_Jacobi_symbol extended GCD algorithm].
 
 '''Jacobian coordinates''' Elliptic Curve operations can be implemented more efficiently by using [https://en.wikibooks.org/wiki/Cryptography/Prime_Curve/Jacobian_Coordinates Jacobian coordinates]. Elliptic Curve operations implemented this way avoid many intermediate modular inverses (which are computationally expensive), and the scheme proposed in this document is in fact designed to not need any inversions at all for validation. When operating on a point ''P'' with Jacobian coordinates ''(x,y,z)'' which is not the point at infinity and for which ''x(P)'' is defined as ''x / z<sup>2</sup>'' and ''y(P)'' is defined as ''y / z<sup>3</sup>'':
-* ''oncurve(P)'' can be implemented as ''y<sup>2</sup> = x<sup>3</sup> + 7z<sup>6</sup> mod p''.
 * ''jacobi(y(P))'' can be implemented as ''jacobi(yz mod p)''.
 * ''x(P) &ne; r'' can be implemented as ''x &ne; z<sup>2</sup>r mod p''.
 
@@ -179,173 +178,10 @@ These can for example be used in [https://github.com/jonasnick/scriptless-script
 
 While the traditional Schnorr blind signatures are vulnerable to [http://www.enseignement.polytechnique.fr/profs/informatique/Francois.Morain/Master1/Crypto/projects/Wagner02.pdf Wagner's attack], there are [https://www.math.uni-frankfurt.de/~dmst/teaching/SS2012/Vorlesung/EBS5.pdf a number of mitigations] which allow them to be usable in practice without any known attacks. Nevertheless, more analysis is required to be confident about the security of the blind signature scheme.
 
-== Test vectors ==
+== Test vectors and reference code ==
 
-All data fields below are given as byte arrays, encoded in hexadecimal.
-
-The following triplets of (public key, message, signature) should pass verification. Furthermore, compliant signers must produce the specified signature given the (private key, message) pair<ref>However, non-compliant signers ''can'' produce different signatures that are valid to verifiers.</ref>:
-
-* Test vector 1
-** Private key: 0000000000000000000000000000000000000000000000000000000000000001
-** Public key: 0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
-** Message: 0000000000000000000000000000000000000000000000000000000000000000
-** Signature: 787A848E71043D280C50470E8E1532B2DD5D20EE912A45DBDD2BD1DFBF187EF67031A98831859DC34DFFEEDDA86831842CCD0079E1F92AF177F7F22CC1DCED05
-
-* Test vector 2
-** Private key: B7E151628AED2A6ABF7158809CF4F3C762E7160F38B4DA56A784D9045190CFEF
-** Public key: 02DFF1D77F2A671C5F36183726DB2341BE58FEAE1DA2DECED843240F7B502BA659
-** Message: 243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89
-** Signature: 2A298DACAE57395A15D0795DDBFD1DCB564DA82B0F269BC70A74F8220429BA1D1E51A22CCEC35599B8F266912281F8365FFC2D035A230434A1A64DC59F7013FD
-
-* Test vector 3
-** Private key: C90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B14E5C7
-** Public key: 03FAC2114C2FBB091527EB7C64ECB11F8021CB45E8E7809D3C0938E4B8C0E5F84B
-** Message: 5E2D58D8B3BCDF1ABADEC7829054F90DDA9805AAB56C77333024B9D0A508B75C
-** Signature: 00DA9B08172A9B6F0466A2DEFD817F2D7AB437E0D253CB5395A963866B3574BE00880371D01766935B92D2AB4CD5C8A2A5837EC57FED7660773A05F0DE142380
-
-The following triple of (public key, message, signature) should pass verification:
-
-* Test vector 4
-** Public key: 03DEFDEA4CDB677750A420FEE807EACF21EB9898AE79B9768766E4FAA04A2D4A34
-** Message: 4DF3C3F68FCC83B27E9D42C90431A72499F17875C81A599B566C9889B9696703
-** Signature: 00000000000000000000003B78CE563F89A0ED9414F5AA28AD0D96D6795F9C6302A8DC32E64E86A333F20EF56EAC9BA30B7246D6D25E22ADB8C6BE1AEB08D49D
-
-* Test vector 4B
-** Public key: 031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F
-** Message: 0000000000000000000000000000000000000000000000000000000000000000
-** Signature: 52818579ACA59767E3291D91B76B637BEF062083284992F2D95F564CA6CB4E3530B1DA849C8E8304ADC0CFE870660334B3CFC18E825EF1DB34CFAE3DFC5D8187
-
-The following triples of (public key, message, signature) should not pass verification.
-
-* Test vector 5
-** Public key: 03EEFDEA4CDB677750A420FEE807EACF21EB9898AE79B9768766E4FAA04A2D4A34
-** Message: 4DF3C3F68FCC83B27E9D42C90431A72499F17875C81A599B566C9889B9696703
-** Signature: 00000000000000000000003B78CE563F89A0ED9414F5AA28AD0D96D6795F9C6302A8DC32E64E86A333F20EF56EAC9BA30B7246D6D25E22ADB8C6BE1AEB08D49D
-** Reason: public key not on the curve
-
-* Test vector 6
-** Public key: 02DFF1D77F2A671C5F36183726DB2341BE58FEAE1DA2DECED843240F7B502BA659
-** Message: 243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89
-** Signature: 2A298DACAE57395A15D0795DDBFD1DCB564DA82B0F269BC70A74F8220429BA1DFA16AEE06609280A19B67A24E1977E4697712B5FD2943914ECD5F730901B4AB7
-** Reason: incorrect R residuosity
-
-* Test vector 7
-** Public key: 03FAC2114C2FBB091527EB7C64ECB11F8021CB45E8E7809D3C0938E4B8C0E5F84B
-** Message: 5E2D58D8B3BCDF1ABADEC7829054F90DDA9805AAB56C77333024B9D0A508B75C
-** Signature 00DA9B08172A9B6F0466A2DEFD817F2D7AB437E0D253CB5395A963866B3574BED092F9D860F1776A1F7412AD8A1EB50DACCC222BC8C0E26B2056DF2F273EFDEC
-** Reason: negated message hash
-
-* Test vector 8
-** Public key: 0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
-** Message: 0000000000000000000000000000000000000000000000000000000000000000
-** Signature: 787A848E71043D280C50470E8E1532B2DD5D20EE912A45DBDD2BD1DFBF187EF68FCE5677CE7A623CB20011225797CE7A8DE1DC6CCD4F754A47DA6C600E59543C
-** Reason: negated s value
-
-* Test vector 9
-** Public key: 03DFF1D77F2A671C5F36183726DB2341BE58FEAE1DA2DECED843240F7B502BA659
-** Message: 243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89
-** Signature: 2A298DACAE57395A15D0795DDBFD1DCB564DA82B0F269BC70A74F8220429BA1D1E51A22CCEC35599B8F266912281F8365FFC2D035A230434A1A64DC59F7013FD
-** Reason: negated public key
-
-* Test vector 10
-** Public key: 02DFF1D77F2A671C5F36183726DB2341BE58FEAE1DA2DECED843240F7B502BA659
-** Message: 243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89
-** Signature: 2A298DACAE57395A15D0795DDBFD1DCB564DA82B0F269BC70A74F8220429BA1D8C3428869A663ED1E954705B020CBB3E7BB6AC31965B9EA4C73E227B17C5AF5A
-** Reason: ''sG - eP'' is infinite
-
-* Test vector 11
-** Public key: 02DFF1D77F2A671C5F36183726DB2341BE58FEAE1DA2DECED843240F7B502BA659
-** Message: 243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89
-** Signature: 4A298DACAE57395A15D0795DDBFD1DCB564DA82B0F269BC70A74F8220429BA1D1E51A22CCEC35599B8F266912281F8365FFC2D035A230434A1A64DC59F7013FD
-** Reason: ''sig[0:32]'' is not an X coordinate on the curve
-
-* Test vector 12
-** Public key: 02DFF1D77F2A671C5F36183726DB2341BE58FEAE1DA2DECED843240F7B502BA659
-** Message: 243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89
-** Signature: FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC2F1E51A22CCEC35599B8F266912281F8365FFC2D035A230434A1A64DC59F7013FD
-** Reason: ''sig[0:32]'' is equal to field size
-
-* Test vector 13
-** Public key: 02DFF1D77F2A671C5F36183726DB2341BE58FEAE1DA2DECED843240F7B502BA659
-** Message: 243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89
-** Signature: 2A298DACAE57395A15D0795DDBFD1DCB564DA82B0F269BC70A74F8220429BA1DFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
-** Reason: ''sig[32:64]'' is equal to curve order
-
-== Appendix A: Reference code ==
-
-A naive but highly inefficient and non-constant time pure Python 3.2 implementation of the signing and verification algorithm can be found below.
-The reference code is for demonstration purposes only and not to be used in production environments.
-
-<source lang="python">
-import hashlib
-import binascii
-
-p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
-n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
-G = (0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798, 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8)
-
-def point_add(P1, P2):
-    if P1 is None:
-        return P2
-    if P2 is None:
-        return P1
-    if P1[0] == P2[0] and P1[1] != P2[1]:
-        return None
-    if P1 == P2:
-        lam = (3 * P1[0] * P1[0] * pow(2 * P1[1], p - 2, p)) % p
-    else:
-        lam = ((P2[1] - P1[1]) * pow(P2[0] - P1[0], p - 2, p)) % p
-    x3 = (lam * lam - P1[0] - P2[0]) % p
-    return (x3, (lam * (P1[0] - x3) - P1[1]) % p)
-
-def point_mul(P, n):
-    R = None
-    for i in range(256):
-        if (n >> i) & 1:
-            R = point_add(R, P)
-        P = point_add(P, P)
-    return R
-
-def bytes_from_int(x):
-    return x.to_bytes(32, byteorder="big")
-
-def bytes_from_point(P):
-    return (b'\x03' if P[1] & 1 else b'\x02') + bytes_from_int(P[0])
-
-def int_from_bytes(b):
-    return int.from_bytes(b, byteorder="big")
-
-def hash_sha256(b):
-    return hashlib.sha256(b).digest()
-
-def on_curve(P):
-    return (pow(P[1], 2, p) - pow(P[0], 3, p)) % p == 7
-
-def jacobi(x):
-    return pow(x, (p - 1) // 2, p)
-
-def schnorr_sign(msg, seckey):
-    k0 = int_from_bytes(hash_sha256(bytes_from_int(seckey) + msg)) % n
-    if k0 == 0:
-        raise RuntimeError('Failure. This happens only with negligible probability.')
-    R = point_mul(G, k0)
-    k = n - k0 if (jacobi(R[1]) != 1) else k0
-    e = int_from_bytes(hash_sha256(bytes_from_int(R[0]) + bytes_from_point(point_mul(G, seckey)) + msg)) % n
-    return bytes_from_int(R[0]) + bytes_from_int((k + e * seckey) % n)
-
-def schnorr_verify(msg, pubkey, sig):
-    if not on_curve(pubkey):
-        return False
-    r = int_from_bytes(sig[0:32])
-    s = int_from_bytes(sig[32:64])
-    if r >= p or s >= n:
-        return False
-    e = int_from_bytes(hash_sha256(sig[0:32] + bytes_from_point(pubkey) + msg)) % n
-    R = point_add(point_mul(G, s), point_mul(pubkey, n - e))
-    if R is None or jacobi(R[1]) != 1 or R[0] != r:
-        return False
-    return True
-</source>
+For development and testing purposes, we provide a [[bip-schnorr/test-vectors.csv|collection of test vectors in CSV format]] and a naive but highly inefficient and non-constant time [[bip-schnorr/reference.py|pure Python 3.7 reference implementation of the signing and verification algorithm]].
+The reference implementation is for demonstration purposes only and not to be used in production environments.
 
 == Footnotes ==
 
