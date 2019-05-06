@@ -103,10 +103,10 @@ The following convention is used, with constants as defined for secp256k1:
 ** The function ''point(x)'', where ''x'' is a 33-byte array, returns the point ''P'' for which ''x(P) = int(x[1:33])'' and ''y(P) & 1 = int(x[0:1]) - 0x02)'', or fails if no such point exists. The function  ''point(x)'' is equivalent to the following pseudocode:
 *** Fail if (''x[0:1] ≠ 0x02'' and ''x[0:1] ≠ 0x03'').
 *** Set flag ''odd'' if ''x[0:1] = 0x03''.
-*** Let ''(r, y) = lift_x(x)''; fail if ''lift_x(x)'' fails.
-*** If (flag ''odd'' is set and ''y'' is an even integer) or (flag ''odd'' is not set and ''y'' is an odd integer):
-**** Let ''y = p - y''.
-*** Return ''(r, y)''.
+*** Let ''P = lift_x(x)''; fail if ''lift_x(x)'' fails.
+*** If (flag ''odd'' is set and ''y(P)'' is an even integer) or (flag ''odd'' is not set and ''y(P)'' is an odd integer):
+**** Return ''-P''
+*** Return ''P''.
 ** The function ''hash(x)'', where ''x'' is a byte array, returns the 32-byte SHA256 hash of ''x''.
 ** The function ''jacobi(x)'', where ''x'' is an integer, returns the [https://en.wikipedia.org/wiki/Jacobi_symbol Jacobi symbol] of ''x / p''. It is equal to ''x<sup>(p-1)/2</sup> mod p'' ([https://en.wikipedia.org/wiki/Euler%27s_criterion Euler's criterion])<ref>For points ''P'' on the secp256k1 curve it holds that ''jacobi(y(P)) &ne; 0''.</ref>.
 
